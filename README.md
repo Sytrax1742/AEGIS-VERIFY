@@ -131,7 +131,7 @@ Keep these secrets out of source control (they're loaded from the environment by
 - If Firestore cache lookups misbehave, try running with the emulator or inspect stored vectors in your Firestore console.
 - Use `uvicorn --reload` for live backend reload while developing.
 
-Regenerating the project snapshot (advanced): `scripts/generate_snapshost.sh` (if present) or run a manual `find`/`wc -l` to inspect files.
+Regenerating the project snapshot (advanced): `scripts/generate_snapshot.sh` (if present) or run a manual `find`/`wc -l` to inspect files.
 
 ---
 
@@ -217,8 +217,8 @@ High-level steps:
 2. Immutable Base: System computes SHA-256 hash and extracts metadata (EXIF/PDF fields).
 3. Vector Lookup: Embed the context via Vertex AI embeddings and query Firestore Vector DB.
 4. Decision Branch:
-   - Cache Hit (similarity > 85%): retrieve pre-existing sieves from Firestore.
-   - Cache Miss: trigger Gemini 1.5 Pro to forge new Ephemeral Sieves and persist them to Firestore.
+  - Cache Hit (similarity above 85%): retrieve pre-existing sieves from Firestore.
+  - Cache Miss (similarity at or below 85%): trigger Gemini 1.5 Pro to forge new Ephemeral Sieves and persist them to Firestore.
 5. Parallel Execution: LangGraph routes the asset through active sieves concurrently (Visual, Semantic, OSINT grounding sieves).
 6. Governor: LangGraph compiles sieve results into a unified JSON findings structure.
 7. Export: Frontend renders dashboard and generates the downloadable Forensic Autopsy PDF.
@@ -229,8 +229,8 @@ Mermaid diagram (process flow):
 flowchart TD
   A[Ingest Asset + Context] --> B[Compute SHA-256 & Extract Metadata]
   B --> C[Embed Context & Query Firestore]
-  C -->|Similarity > 0.85| D[Cache Hit: Retrieve Sieves]
-  C -->|Similarity <= 0.85| E[Cache Miss: Forge Sieves (Gemini)]
+  C -->|Similarity above 0.85| D[Cache Hit: Retrieve Sieves]
+  C -->|Similarity at or below 0.85| E[Cache Miss: Forge Sieves (Gemini)]
   D --> F[LangGraph: Execute Sieves in Parallel]
   E --> F
   F --> G[Compile Findings (Governor)]
@@ -262,7 +262,9 @@ flowchart LR
   end
 
   subgraph AI_Stack
-    VTX & VG & VISION
+    VTX[Vertex AI Gemini 1.5 Pro]
+    VG[Vertex Grounding (Google Search)]
+    VISION[Cloud Vision API]
   end
 
   FS -.->|vector retrieval| SG
