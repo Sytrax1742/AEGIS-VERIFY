@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
+    "react-dropzone": "^15.0.0"
+  }
+}
