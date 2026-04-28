@@ -162,7 +162,10 @@ export default function Home() {
       formData.append("file", file);
       formData.append("user_prompt", userPrompt.trim());
 
-      const response = await fetch("http://localhost:8000/api/v1/scan", {
+      // Use the Cloud URL if deployed, otherwise fallback to local testing!
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/scan`, {
         method: "POST",
         body: formData,
       });
