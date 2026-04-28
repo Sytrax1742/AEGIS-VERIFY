@@ -24,13 +24,45 @@ The proliferation of Generative AI has eroded digital trust. Enterprises, media 
 
 Instead of a single "trust score," Aegis-Verify produces a **Cryptographic Forensic Autopsy Report**: a human- and legally-readable artifact that records every test performed, all deterministic proofs (SHA-256 hashes, metadata), and LLM-guided findings.
 
-| Attribute | Description |
-|---|---|
-| **Context-Driven** | User supplies a prompt (e.g., "Audit this insurance claim") which guides the entire investigation |
-| **Ephemeral Sieve Forge** | Dynamically invents and deploys custom forensic tests (Sieves) tailored to the specific asset |
-| **Neuro-Symbolic** | Combines probabilistic LLM analysis (Gemini 2.5 Pro) with deterministic math (SHA-256, EXIF, metadata) |
-| **Grounded OSINT** | Vertex AI Grounding (Google Search) cross-checks claims against live web evidence |
-| **Self-Learning** | Verified sieves are vectorized and cached in Firestore — future similar cases skip the LLM entirely |
+### 🧠 1. Context-Aware Sieve Generation (Domain-Aware Routing)
+**The Concept:** Security isn't one-size-fits-all. A medical invoice requires entirely different forensic validation than a corporate NDA.
+**The Pitch:** "Instead of relying on rigid, static rulesets, Aegis-Verify utilizes Gemini 2.5 Pro as a Cognitive Router. By semantically analyzing the user’s investigative prompt and the asset's underlying data structure, the engine instantly maps the specific domain. It understands exactly what it is looking at, prioritizing semantic logic checks for legal documents or deep-pixel visual analysis for photographic evidence."
+
+### ⚡ 2. Real-Time Sieve Generation (Zero-Shot Ephemeral Sieves)
+**The Concept:** If the system encounters a completely new type of document, it doesn't fail—it invents a new tool on the fly.
+**The Pitch:** "When confronted with a novel threat vector or a previously unseen document type, Aegis-Verify deploys a Zero-Shot Ephemeral Sieve Architecture. It autonomously forges custom forensic heuristics at runtime. If an analyst uploads an unprecedented asset, the system dynamically writes the exact forensic logic required to audit it. It acts as an adapting, real-time digital immune system."
+
+### 🧬 3. Self-Learning Through Memory (The Recursive Sieve Vault)
+**The Concept:** We save the dynamically generated sieves in a vector database. The next time a similar document is uploaded, execution is instant.
+**The Pitch:** "Aegis-Verify possesses an Autonomous Immune Memory powered by Google Cloud Firestore's Native Vector Search. Once a custom sieve is forged, its mathematical embedding is cached offline. When a similar threat context is ingested in the future, the system bypasses the LLM generation phase entirely (a 'Cache Hit'). This instantly retrieves the verified forensic logic, dramatically reducing LLM latency and drastically cutting cloud compute costs."
+
+### 🛡️ 4. Admin Approval & Governance (Human-in-the-Loop Quarantine)
+**The Concept:** AI shouldn't permanently rewrite global security rules without a human expert saying "Yes."
+**The Pitch:** "Enterprise security demands strict governance. Newly forged AI sieves are initially saved in a 'Quarantine State' (pending verification). Through an administrative pipeline, a human CISO can review the AI-generated forensic rules. Once approved, the ephemeral sieve is promoted to the permanent global ruleset. This ensures continuous, autonomous system hardening while maintaining uncompromising Human-in-the-Loop (HITL) oversight."
+
+---
+
+## 🛡️ The Aegis-Verify USPs (Unique Selling Propositions)
+
+1. **The "Zero-Day" Immunity (Ephemeral Sieve Architecture)**
+   - **The Problem:** Traditional cybersecurity and forensic tools rely on static, pre-programmed rulesets. When a new type of fraud emerges (a "zero-day" forgery), the system is blind until developers patch it.
+   - **The USP:** Aegis-Verify uses a Zero-Shot Ephemeral Sieve Architecture. It doesn’t rely on a dropdown menu of tests; it uses Gemini 2.5 Pro to invent custom forensic tests (Sieves) on the fly, perfectly tailored to whatever unprecedented asset is uploaded. It adapts in real-time.
+
+2. **Autonomous Immune Memory (Vector-Driven Cost Reduction)**
+   - **The Problem:** Agentic AI is usually too slow and too expensive for enterprise scale because it generates everything from scratch every single time.
+   - **The USP:** Aegis-Verify has Amnesia-Free AI. By caching generated sieves into Google Cloud Firestore's Vector Database, the system "remembers" past document types. A cache-hit bypasses the LLM generation phase entirely, dropping processing latency from 15 seconds to 0.2 seconds and drastically cutting API cloud compute costs. It gets faster and cheaper the more you use it.
+
+3. **Semantic Forgery Detection (Catching the "Lie", not just the Pixel)**
+   - **The Problem:** Standard tools only scan for visual deepfakes (pixel blending, noise drift) or metadata (EXIF). Advanced forgers can easily bypass this by keeping the visual authentic but altering the text context.
+   - **The USP:** Aegis-Verify deploys a Semantic Sieve. It doesn't just scan the document; it reads the document using Gemini's massive context window. It detects temporal impossibilities (e.g., dates that contradict each other), legal inconsistencies, and generative AI text signatures within official documents. We don't just catch bad Photoshop; we catch the lie.
+
+4. **"Explainability-First" Output (The Legal-Grade Autopsy)**
+   - **The Problem:** Enterprise CISOs and lawyers cannot take action on a "black-box" AI tool that just spits out a "95% Fake" score. They need proof.
+   - **The USP:** Aegis-Verify guarantees deterministic explainability. It outputs a downloadable, printable Forensic Autopsy PDF detailing the exact chain of custody (SHA-256 Hash), the specific sieves used, and a conversational breakdown of the exact anomalies found. Probabilistic AI guesses; Aegis-Verify proves.
+
+5. **100% Google Cloud-Native Scalability**
+   - **The Problem:** Heavy machine learning models require expensive, idle GPU servers to maintain uptime.
+   - **The USP:** Built specifically for the Google ecosystem, Aegis-Verify is entirely serverless. The LangGraph orchestration runs on Google Cloud Run, meaning it scales to 0 when idle (costing nothing) and can instantly spin up 1,000 containers to process a massive influx of documents during an enterprise audit.
 
 ---
 
@@ -113,6 +145,8 @@ executor_node      → END
 
 The CISO Dashboard displays real-time forensic analysis output, including active sieves, SHA-256 hash, contextual verdict with Trust Score badge, and the findings JSON panel.
 
+![CISO Dashboard - Sieve Pulse](./docs/screenshots/Screenshot_20260428_090310.png)
+
 > **Sieve Pulse Panel** — shows `SCAN STATUS`, `REPORT READINESS`, `SHA-256 HASH`, `CONTEXTUAL VERDICT` with Trust Score, `ACTIVE SIEVES`, and raw `FINDINGS` JSON.
 
 **Trust Score Levels:**
@@ -128,6 +162,8 @@ The CISO Dashboard displays real-time forensic analysis output, including active
 
 The **Full Analysis** modal surfaces the complete `contextual_verdict` string from Gemini 2.5 Pro — a natural-language forensic narrative that directly addresses the user's original prompt, followed by the final verdict and Trust Score.
 
+![Contextual Verdict Modal](./docs/screenshots/Screenshot_20260428_090347.png)
+
 *Example output for a medical report:*
 > "I have reviewed the medical report from MAX Lab you provided to check its genuineness. The document shows a Random Blood Sugar test result from April 3, 2023... The document is critically deficient as it is missing all essential patient-identifying information... Therefore, the forensic verdict is that the document is not authentic as a patient's medical record."
 > **Trust Score: 40% — CAUTION**
@@ -137,6 +173,8 @@ The **Full Analysis** modal surfaces the complete `contextual_verdict` string fr
 ## Deployment Commander v2.0
 
 The `deploy.sh` script provides an interactive btop-style TUI for deploying both services.
+
+![Deployment Commander v2.0](./docs/screenshots/Screenshot_20260428_090233.png)
 
 ```
 ╭──────────────────────────────────────────────────────────╮
@@ -166,6 +204,8 @@ The `deploy.sh` script provides an interactive btop-style TUI for deploying both
 Both services deploy simultaneously in a tmux split:
 - **Left pane `[ 🌐 VERCEL DEPLOYMENT ]`**: Next.js build → Vercel production URL
 - **Right pane `[ ☁️ GCP CLOUD RUN DEPLOYMENT ]`**: Docker build → Cloud Run service `aegis-backend`
+
+![Sync Deployment Split Screen](./docs/screenshots/Screenshot_20260428_090714.png)
 
 **Deployed URLs:**
 - **Frontend:** `https://aegis-verify-ui-kez7fwqjb-pswaikar1742-gmailcoms-projects.vercel.app`
@@ -390,6 +430,61 @@ Upload a vendor invoice with prompt *"Verify vendor legitimacy"*. System constru
 
 ### Medical Report Verification
 Upload a medical PDF with prompt *"Check this report for authenticity"*. The DocumentMetadataVerification sieve extracts metadata, flags missing patient-identifying fields, and delivers a 40% Trust Score — **CAUTION**.
+
+---
+
+## 💼 The Hybrid Business Model
+
+**The Strategy:** A three-tiered hybrid approach combining Product-Led Growth (PLG) for developers with Enterprise-grade deployments for banks, insurance agencies, and law firms.
+
+### Tier 1: The Developer "Open-Core" (Bring-Your-Own-Cloud)
+- **Target:** Security researchers, independent journalists, and startup developers.
+- **The Model:** Free to use. Users clone the Aegis-Verify Next.js/FastAPI codebase but must plug in their own Google Cloud Project ID and Vertex AI billing account.
+- **Why it works:** You pay $0 in server costs for free users. It drives massive developer adoption and acts as a massive lead-generation engine. Google loves this because you are driving organic compute traffic to GCP.
+
+### Tier 2: Managed Cloud SaaS (Pay-Per-Autopsy)
+- **Target:** Mid-market law firms, HR departments, and local insurance agencies.
+- **The Model:** A fully hosted, turn-key web platform. Users pay a subscription fee + a metered cost per document scanned (e.g., $0.15 per Autopsy Report).
+- **Why it works:** High-margin revenue. You leverage Google Cloud Run's serverless auto-scaling to keep your overhead near zero when traffic is low, ensuring you only pay Google when your clients pay you.
+
+### Tier 3: Enterprise VPC Deployment (The Big Ticket)
+- **Target:** Global Banks, Healthcare Networks, and Government Entities.
+- **The Model:** Custom enterprise contracts ($50k - $100k/year). For highly regulated industries with strict data residency laws (GDPR, HIPAA, SOC2), Aegis-Verify is deployed directly inside the client's own private Google Cloud infrastructure (VPC).
+- **Why it works:** This includes the exclusive Admin Governance Dashboard (allowing CISOs to manually approve/quarantine new sieves). This tier locks in massive B2B contracts.
+
+---
+
+## 💼 Premium Enterprise Add-On: "Custom Sieve Vaults & Industry Packs"
+
+*Add this right below your Tier 3 Enterprise model. This is where you make the real money.*
+
+**The Concept:** While the Ephemeral Sieve Forge generates rules on the fly for unknown documents, enterprises process millions of known documents (Passports, Claims, W-2s). We offer them **Custom Sieve Vaults**—pre-compiled, highly optimized, industry-specific forensic pipelines.
+
+**The Offerings:**
+1. **Industry-Specific "Sieve Packs" (Subscription Add-Ons):**
+   - **The KYC/AML Pack:** Pre-loaded sieves specifically built to verify Passports, State IDs, and Utility Bills (checking MRZ codes, holographic watermarks, and typography alignment).
+   - **The InsurTech Pack:** Specialized sieves for vehicle collision photos (checking metadata timestamp vs. shadow angles, and reverse-image searching the crash against global news databases).
+   - **The FinTech Pack:** Bank statement and W-2 sieves (mathematical reconciliation of tax brackets, detecting splicing in PDF routing numbers).
+
+2. **The "Sieve Studio" SDK (Enterprise Customization):**
+   - Instead of Aegis-Verify writing the rules, we provide an SDK/Dashboard where the client's own internal compliance officers can hardcode their own proprietary Sieves.
+   - *Example:* A proprietary trading firm can write a Sieve that strictly scans for their internal watermarks.
+
+**The Monetization Strategy:**
+- Clients pay a premium annual licensing fee to unlock these specialized "Sieve Packs."
+- If a bank wants a custom Sieve built specifically for their internal, highly classified document types, Aegis-Verify offers "Sieve-as-a-Service" consulting, charging high-ticket professional service fees to build, train, and deploy custom forensic logic directly into their private Vault.
+
+---
+
+## 📜 The Licensing Strategy
+
+Since your tech stack relies on proprietary Google SDKs and APIs, you cannot open-source the models themselves, but you can license the orchestration engine.
+
+**The License:** Business Source License (BSL) 1.1 transitioning to Apache 2.0
+
+- **What it means:** The source code for the LangGraph orchestration, Sieve Forge, and Next.js frontend is public and free for anyone to read, test, and use internally.
+- **The Catch (Protection):** Under the BSL, no one is legally allowed to take your code and offer it as a competing commercial "SaaS Forensic Service."
+- **The Google Bypass:** The license explicitly states that the software relies on third-party Google Cloud Services. The license covers your routing logic and UI, explicitly excluding ownership over the Vertex AI outputs. This entirely bypasses any ToS violations regarding "reselling API access" because in the open-core version, the user is paying Google directly for the Vertex compute, and in the Enterprise version, you are selling the orchestration and HITL governance software, not raw LLM access.
 
 ---
 
