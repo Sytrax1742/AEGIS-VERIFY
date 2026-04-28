@@ -146,6 +146,7 @@ class VertexLLMService:
             "to validate authenticity, manipulation indicators, and contextual consistency. "
             "Return ONLY strict JSON with exactly these keys: critical_red_flags (array of strings), "
             "missing_metadata (array of strings), contextual_verdict (string). "
+            "IMPORTANT REQUIREMENT: For the 'contextual_verdict', you MUST begin with a natural, conversational paragraph that directly addresses the user's original prompt (e.g., 'I have reviewed the insurance claim as requested...'), followed by your final forensic verdict. "
             "Do not include markdown, explanations, confidence scores, or any extra keys.\n\n"
             f"Today's date is {current_date}. Use this for all temporal and historical consistency checks."
         )
