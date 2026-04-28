@@ -43,3 +43,9 @@ pnpm-debug.log*
 logs.md
 current_code.md
 context.md
+
+# IDE
+.vscode/
+.idea/
+*.swo
+Thumbs.db

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
 from typing import Any, Mapping, Sequence, TypedDict
 
@@ -35,7 +36,7 @@ class DynamicSieve(TypedDict):
 class VertexLLMService:
     """Wrapper around Vertex Gemini for grounded sieve-guided analysis."""
 
-    MODEL_NAME = "gemini-1.5-pro-preview-0409"
+    MODEL_NAME = "gemini-2.5-pro"
 
     def __init__(self) -> None:
         vertexai.init(project=settings.GCP_PROJECT_ID, location=settings.GCP_REGION)
@@ -43,14 +44,15 @@ class VertexLLMService:
         self._grounding_tools = self._build_grounding_tools()
 
     def _build_grounding_tools(self) -> list[Tool]:
-        if grounding is not None and hasattr(grounding, "GoogleSearchRetrieval"):
-            return [Tool(google_search_retrieval=grounding.GoogleSearchRetrieval())]
-
+    # Gemini 2.5+ requires the new 'google_search' tool format
+        if hasattr(Tool, "from_google_search"):
+            return [Tool.from_google_search()]
+      
+    # Legacy fallback for older SDKs
         if hasattr(Tool, "from_google_search_retrieval"):
-            return [Tool.from_google_search_retrieval()]
-
-        if GoogleSearchRetrieval is not None:
-            return [Tool(google_search_retrieval=GoogleSearchRetrieval())]
+            if grounding is not None and hasattr(grounding, "GoogleSearchRetrieval"):
+                return[Tool.from_google_search_retrieval(grounding.GoogleSearchRetrieval())]
+            return[Tool.from_google_search_retrieval()]
 
         raise RuntimeError(
             "Google Search Grounding is unavailable in the installed Vertex AI SDK"
@@ -63,6 +65,7 @@ class VertexLLMService:
         active_sieves: Sequence[Mapping[str, Any]],
     ) -> VertexLLMResponse:
         """Generates strict forensic JSON from prompt, image evidence, and active sieves."""
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         sieve_context = json.dumps(list(active_sieves), ensure_ascii=True)
 
         instruction = (
@@ -70,6 +73,7 @@ class VertexLLMService:
             "using the user prompt and active sieves. Return ONLY strict JSON with exactly "
             "these keys: critical_red_flags (string array), missing_metadata (string array), "
             "contextual_verdict (string). No extra keys, no markdown, no prose outside JSON.\n\n"
+            f"Today's date is {current_date}. Use this for all temporal and historical consistency checks.\n\n"
             f"User Prompt: {user_prompt}\n"
             f"Active Sieves: {sieve_context}"
         )
@@ -88,7 +92,7 @@ class VertexLLMService:
             self._model.generate_content,
             parts,
             generation_config=generation_config,
-            tools=self._grounding_tools,
+            # tools=self._grounding_tools,
         )
 
         response_text = (response.text or "").strip()
@@ -134,6 +138,7 @@ class VertexLLMService:
         active_sieves: list[DynamicSieve],
     ) -> VertexLLMResponse:
         """Executes grounded forensic analysis for uploaded evidence using active sieves."""
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         system_prompt = (
             "You are Aegis-Verify, an enterprise digital forensics executor. "
             "Analyze the uploaded evidence using the provided user context and active sieves. "
@@ -141,7 +146,8 @@ class VertexLLMService:
             "to validate authenticity, manipulation indicators, and contextual consistency. "
             "Return ONLY strict JSON with exactly these keys: critical_red_flags (array of strings), "
             "missing_metadata (array of strings), contextual_verdict (string). "
-            "Do not include markdown, explanations, confidence scores, or any extra keys."
+            "Do not include markdown, explanations, confidence scores, or any extra keys.\n\n"
+            f"Today's date is {current_date}. Use this for all temporal and historical consistency checks."
         )
 
         sieve_context = json.dumps(active_sieves, ensure_ascii=True)
@@ -166,7 +172,7 @@ class VertexLLMService:
                 temperature=0.1,
                 response_mime_type="application/json",
             ),
-            tools=self._grounding_tools,
+            # tools=self._grounding_tools,
         )
 
         response_text = (response.text or "").strip()

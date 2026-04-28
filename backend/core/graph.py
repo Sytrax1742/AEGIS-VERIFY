@@ -31,7 +31,7 @@ class AutopsyState(TypedDict):
 
 
 _EMBEDDING_MODEL_NAME = "text-embedding-004"
-_SIEVE_FORGE_MODEL_NAME = "gemini-1.5-pro-preview-0409"
+_SIEVE_FORGE_MODEL_NAME = "gemini-2.5-flash"
 _ALLOWED_TOOLS = {"vision", "osint_grounding", "metadata"}
 
 vertexai.init(project=settings.GCP_PROJECT_ID, location=settings.GCP_REGION)

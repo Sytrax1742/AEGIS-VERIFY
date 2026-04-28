@@ -34,8 +34,10 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica",
   },
   header: {
-    backgroundColor: "#0b1f3a",
+    backgroundColor: "#1e293b",
     color: "#ffffff",
+    borderBottomWidth: 2,
+    borderBottomColor: "#ffffff",
     borderRadius: 10,
     paddingVertical: 16,
     paddingHorizontal: 16,
@@ -51,6 +53,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 700,
+    color: "#ffffff",
     marginBottom: 6,
   },
   section: {
@@ -77,7 +80,7 @@ const styles = StyleSheet.create({
   verdict: {
     fontSize: 11,
     lineHeight: 1.55,
-    color: "#0f172a",
+    color: "#ffffff",
   },
   sieveCard: {
     borderWidth: 1,

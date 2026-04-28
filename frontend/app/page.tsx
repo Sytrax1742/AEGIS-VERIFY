@@ -97,6 +97,48 @@ export default function Home() {
     };
   }, [result]);
 
+  const isVerdictThreat = useMemo(() => {
+    const threatKeywords = ["fraudulent", "tampered", "forgery"];
+    const verdict = contextualVerdict.toLowerCase();
+    return threatKeywords.some((keyword) => verdict.includes(keyword));
+  }, [contextualVerdict]);
+
+  const trustScore = useMemo(() => {
+    if (!result?.findings || !result?.active_sieves) {
+      return null;
+    }
+
+    const criticalRedFlags = result.findings.critical_red_flags;
+    const numSieves = result.active_sieves.length || 1;
+
+    if (!Array.isArray(criticalRedFlags)) {
+      return null;
+    }
+
+    const numFlags = criticalRedFlags.length;
+
+    // If no flags, perfect trust
+    if (numFlags === 0) {
+      return { score: 100, level: "high", label: "Clean" };
+    }
+
+    // Calculate ratio: flags per sieve
+    const flagsPerSieve = numFlags / numSieves;
+
+    // High risk: more than 2 flags per sieve on average
+    if (flagsPerSieve > 2) {
+      return { score: 25, level: "low", label: "Suspicious" };
+    }
+
+    // Mid risk: 1-2 flags per sieve
+    if (flagsPerSieve > 1) {
+      return { score: 55, level: "mid", label: "Caution" };
+    }
+
+    // Low risk: less than 1 flag per sieve
+    return { score: 75, level: "high", label: "Mostly Safe" };
+  }, [result?.findings, result?.active_sieves]);
+
   const handleRunAutopsy = async () => {
     if (!file) {
       setError("Please upload a file before running an autopsy.");
@@ -167,7 +209,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="grid flex-1 gap-6 py-8 lg:grid-cols-[1.45fr_0.9fr]">
+        <section className="w-full overflow-hidden grid flex-1 gap-6 py-8 lg:grid-cols-[1.45fr_0.9fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.06)]">
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
@@ -238,7 +280,7 @@ export default function Home() {
                         <button
                           type="button"
                           disabled={isSubmitting || loading}
-                          className="inline-flex h-10 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-10 items-center justify-center rounded-full border border-blue-600 bg-blue-600 px-4 text-sm font-semibold text-white shadow-md transition hover:border-blue-700 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {loading
                             ? "Preparing Forensic PDF..."
@@ -294,13 +336,60 @@ export default function Home() {
                       </p>
                     </article>
 
-                    <article className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                        Contextual Verdict
-                      </p>
-                      <p className="mt-3 text-sm leading-6 text-slate-700">
-                        {contextualVerdict}
-                      </p>
+                    <article
+                      className={`rounded-2xl border p-4 ${
+                        isVerdictThreat
+                          ? "border-rose-200 bg-rose-50"
+                          : "border-emerald-200 bg-emerald-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                            Contextual Verdict
+                          </p>
+                          <p
+                            className={`mt-3 text-sm leading-6 ${
+                              isVerdictThreat ? "text-rose-900" : "text-emerald-900"
+                            }`}
+                          >
+                            {contextualVerdict}
+                          </p>
+                        </div>
+                        {trustScore && (
+                          <div className="flex flex-col items-center gap-2 pt-1">
+                            <div
+                              className={`relative flex h-16 w-16 items-center justify-center rounded-full border-4 text-center ${
+                                trustScore.level === "low"
+                                  ? "border-rose-300 bg-rose-100"
+                                  : trustScore.level === "mid"
+                                    ? "border-amber-300 bg-amber-100"
+                                    : "border-emerald-300 bg-emerald-100"
+                              }`}
+                            >
+                              <div>
+                                <p className="text-xs font-bold text-slate-950">
+                                  {trustScore.score}%
+                                </p>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                  Trust
+                                </p>
+                              </div>
+                            </div>
+                            <p
+                              className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                                trustScore.level === "low"
+                                  ? "text-rose-700"
+                                  : trustScore.level === "mid"
+                                    ? "text-amber-700"
+                                    : "text-emerald-700"
+                              }`}
+                            >
+                              {trustScore.label}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </article>
                   </div>
 
@@ -338,9 +427,11 @@ export default function Home() {
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                       Findings
                     </p>
-                    <pre className="mt-3 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
-                      {JSON.stringify(result.findings ?? {}, null, 2)}
-                    </pre>
+                    <div className="mt-3 overflow-x-auto max-w-full">
+                      <pre className="rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100 whitespace-pre-wrap break-words">
+                        {JSON.stringify(result.findings ?? {}, null, 2)}
+                      </pre>
+                    </div>
                   </article>
                 </div>
               ) : (
