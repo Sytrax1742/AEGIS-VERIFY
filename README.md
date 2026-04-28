@@ -1,146 +1,409 @@
-# Aegis-Verify — Forensic Autopsy Pipeline
+# 🛡️ Aegis-Verify — Forensic Autopsy Pipeline
 
-Aegis-Verify is an evidence intake and forensic analysis pipeline that uses a grounded LLM (Vertex AI Gemini) and an adaptive sieve architecture to produce an enterprise-grade PDF "Forensic Autopsy" report.
+> **Domain-Aware, Autonomous Digital Asset Forensics Engine**  
+> Built for the **Google Solution Challenge 2026** · Powered by **Vertex AI + LangGraph + Firestore**
 
-This README is interactive and focused on getting you running locally, explaining the architecture, and showing common workflows (upload → analyze → download PDF).
+[![Backend](https://img.shields.io/badge/Backend-FastAPI%20%2B%20LangGraph-009688?style=flat-square&logo=python)](./backend)
+[![Frontend](https://img.shields.io/badge/Frontend-Next.js%2016%20%2B%20React%2019-000000?style=flat-square&logo=next.js)](./frontend)
+[![AI](https://img.shields.io/badge/AI-Gemini%202.5%20Pro%20%2B%20Flash-4285F4?style=flat-square&logo=google)](https://cloud.google.com/vertex-ai)
+[![Deploy](https://img.shields.io/badge/Deploy-Vercel%20%2B%20Cloud%20Run-00C7B7?style=flat-square)](./deploy.sh)
 
-**Quick Links**
-- Backend: `/backend` — FastAPI + LangGraph orchestration
-- Frontend: `/frontend` — Next.js (App Router) UI with PDF download via `@react-pdf/renderer`
-- Docs/Snapshots: `logs.md`, `current_code.md`, `context.md` (these files are ignored by git)
+---
+
+## The Problem — The Visibility Gap & Alert Fatigue
+
+The proliferation of Generative AI has eroded digital trust. Enterprises, media organizations, and legal institutions face an unprecedented volume of sophisticated digital manipulation — deepfakes, forged contracts, synthetic media. Current detection approaches suffer from three fatal flaws:
+
+- **Probabilistic "Black Boxes":** Generic likelihood scores without explainable proof are inadequate for legal or high-stakes audit contexts.
+- **Alert Fatigue:** Uncontextualized anomaly flags overwhelm security teams, increasing the chance true threats are ignored.
+- **Static Rigidity:** Rule-based detectors cannot dynamically adapt to novel document types or domains.
+
+---
+
+## Our Solution — Aegis-Verify
+
+Instead of a single "trust score," Aegis-Verify produces a **Cryptographic Forensic Autopsy Report**: a human- and legally-readable artifact that records every test performed, all deterministic proofs (SHA-256 hashes, metadata), and LLM-guided findings.
+
+| Attribute | Description |
+|---|---|
+| **Context-Driven** | User supplies a prompt (e.g., "Audit this insurance claim") which guides the entire investigation |
+| **Ephemeral Sieve Forge** | Dynamically invents and deploys custom forensic tests (Sieves) tailored to the specific asset |
+| **Neuro-Symbolic** | Combines probabilistic LLM analysis (Gemini 2.5 Pro) with deterministic math (SHA-256, EXIF, metadata) |
+| **Grounded OSINT** | Vertex AI Grounding (Google Search) cross-checks claims against live web evidence |
+| **Self-Learning** | Verified sieves are vectorized and cached in Firestore — future similar cases skip the LLM entirely |
+
+---
+
+## System Architecture
+
+![System Architecture](./docs/system_architecture.png)
+
+The architecture follows a strict **Google-Native** stack: the Next.js CISO Cockpit calls the FastAPI backend (Cloud Run), which hands off to the LangGraph StateGraph. The graph's Memory Router checks Firestore's Native Vector Search — on a cache hit it retrieves proven sieves in sub-second; on a miss it calls Gemini 2.5 Flash to forge new sieves, then invokes Gemini 2.5 Pro to execute the full forensic analysis.
+
+### Component Overview
+
+```
+Browser (CISO Cockpit)
+    └── POST /api/v1/scan (multipart: file + user_prompt)
+            └── FastAPI [Cloud Run · Python 3.11 · PORT 8080]
+                    └── LangGraph StateGraph
+                            ├── memory_router_node → Vertex AI text-embedding-004 + Firestore vector search
+                            ├── sieve_forge_node   → Gemini 2.5 Flash (cache miss path)
+                            └── executor_node      → Gemini 2.5 Pro multimodal (all paths)
+                                    └── findings JSON → Dashboard + @react-pdf/renderer PDF
+```
+
+---
+
+## Forensic Pipeline — Data Flow
+
+![Forensic Pipeline](./docs/forensic_pipeline.png)
+
+### Step-by-Step Flow
+
+1. **Evidence Ingest** — User drags & drops a file (PDF/image) and supplies a context prompt
+2. **SHA-256 Hash** — Client-side WebCrypto API computes the cryptographic fingerprint (immutability proof)
+3. **Prompt Embedding** — `text-embedding-004` vectorizes the user prompt into a `list[float]`
+4. **Firestore Vector Search** — Cosine similarity query on the `ephemeral_sieves` collection
+5. **Branch Decision:**
+   - **Cache Hit** (similarity > 0.85): retrieve pre-verified sieves from the Recursive Sieve Vault (sub-second, zero LLM cost)
+   - **Cache Miss** (similarity ≤ 0.85): Gemini 2.5 Flash forges 2–3 custom `DynamicSieve` objects and persists them
+6. **Executor Node** — Gemini 2.5 Pro runs multimodal forensic analysis using the active sieves
+7. **Findings Compilation** — LangGraph Governor merges `critical_red_flags`, `missing_metadata`, `contextual_verdict`
+8. **Dashboard + PDF** — Trust Score badge rendered; `@react-pdf/renderer` generates the Forensic Autopsy PDF
+
+---
+
+## LangGraph State Machine
+
+![LangGraph State Machine](./docs/langgraph_state_machine.png)
+
+```python
+# AutopsyState — the typed contract flowing through every LangGraph node
+class AutopsyState(TypedDict):
+    file_bytes: bytes
+    mime_type: str
+    user_prompt: str
+    prompt_embedding: list[float]
+    active_sieves: list[DynamicSieve]   # forged or retrieved
+    findings: dict[str, Any]            # merged across nodes
+    autopsy_report_ready: bool
+
+# DynamicSieve — the forensic test unit
+class DynamicSieve(TypedDict):
+    sieve_name: str
+    objective: str
+    required_tool: str  # "vision" | "osint_grounding" | "metadata"
+```
+
+**Graph edges:**
+```
+START → memory_router_node
+memory_router_node → executor_node      [cache_hit = True]
+memory_router_node → sieve_forge_node   [cache_hit = False]
+sieve_forge_node   → executor_node
+executor_node      → END
+```
+
+---
+
+## Live Screenshots
+
+### CISO Dashboard — Sieve Pulse & Results
+
+The CISO Dashboard displays real-time forensic analysis output, including active sieves, SHA-256 hash, contextual verdict with Trust Score badge, and the findings JSON panel.
+
+> **Sieve Pulse Panel** — shows `SCAN STATUS`, `REPORT READINESS`, `SHA-256 HASH`, `CONTEXTUAL VERDICT` with Trust Score, `ACTIVE SIEVES`, and raw `FINDINGS` JSON.
+
+**Trust Score Levels:**
+
+| Score | Level | Condition |
+|---|---|---|
+| 100% ✅ | **Clean** | Zero red flags detected |
+| 75% 🟡 | **Mostly Safe** | <1 flag per sieve on average |
+| 55% 🟠 | **Caution** | 1–2 flags per sieve |
+| 25% 🔴 | **Suspicious** | >2 flags per sieve |
+
+### Contextual Verdict Modal
+
+The **Full Analysis** modal surfaces the complete `contextual_verdict` string from Gemini 2.5 Pro — a natural-language forensic narrative that directly addresses the user's original prompt, followed by the final verdict and Trust Score.
+
+*Example output for a medical report:*
+> "I have reviewed the medical report from MAX Lab you provided to check its genuineness. The document shows a Random Blood Sugar test result from April 3, 2023... The document is critically deficient as it is missing all essential patient-identifying information... Therefore, the forensic verdict is that the document is not authentic as a patient's medical record."
+> **Trust Score: 40% — CAUTION**
+
+---
+
+## Deployment Commander v2.0
+
+The `deploy.sh` script provides an interactive btop-style TUI for deploying both services.
+
+```
+╭──────────────────────────────────────────────────────────╮
+│  🛡️  AEGIS-VERIFY :: DEPLOYMENT COMMANDER v2.0           │
+├──────────────────────────────────────────────────────────┤
+│  Select target architecture to provision:                │
+│                                                          │
+│[1] 🌐 Vercel       (Frontend UI)                         │
+│  [2] ☁️  Cloud Run    (Backend Engine)                    │
+│  [3] 🚀 SYNC          (Split-Screen Dual Deploy)          │
+│  [4] ❌ Abort         (Exit)                              │
+╰──────────────────────────────────────────────────────────╯
+```
+
+**Option 3 — SYNC** launches a tmux split-screen session running Vercel and Cloud Run deployments simultaneously in side-by-side panes. Falls back to parallel background processes with colored prefixes if tmux is unavailable.
+
+### Deployment Targets
+
+| Option | Service | Command |
+|---|---|---|
+| `[1]` Vercel | Frontend (Next.js) | `npx vercel --prod --yes` |
+| `[2]` Cloud Run | Backend (FastAPI) | `gcloud run deploy aegis-backend --source . --region us-central1` |
+| `[3]` SYNC | Both simultaneously | tmux split-screen, left pane = Vercel, right pane = Cloud Run |
+
+### Live Deployment
+
+Both services deploy simultaneously in a tmux split:
+- **Left pane `[ 🌐 VERCEL DEPLOYMENT ]`**: Next.js build → Vercel production URL
+- **Right pane `[ ☁️ GCP CLOUD RUN DEPLOYMENT ]`**: Docker build → Cloud Run service `aegis-backend`
+
+**Deployed URLs:**
+- **Frontend:** `https://aegis-verify-ui-kez7fwqjb-pswaikar1742-gmailcoms-projects.vercel.app`
+- **Backend:** `https://aegis-backend-*.run.app` (Cloud Run, `us-central1`)
 
 ---
 
 ## Quick Start (Local Development)
 
-Prerequisites
+### Prerequisites
 
-- Python 3.11+ (virtualenv recommended)
+- Python 3.11+ with virtualenv
 - Node.js 18+ / npm 9+
-- Google Cloud credentials configured for Vertex AI and Firestore
+- Google Cloud credentials with Vertex AI + Firestore permissions
+- GCP project with `GCP_PROJECT_ID=aegis-verify-2026`
 
-Backend (API)
-
-1. Create and activate a virtual environment:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-2. Install Python dependencies:
+### Backend (FastAPI)
 
 ```bash
-pip install -r backend/requirements.txt
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# Set environment variables
+export GCP_PROJECT_ID="aegis-verify-2026"
+export GCP_REGION="us-central1"
+export CORS_ORIGINS='["http://localhost:3000"]'
+
+# Run dev server
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-3. Set required environment variables (example):
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
-export GCP_PROJECT_ID="your-gcp-project-id"
-# optional / recommended
-export FIRESTORE_EMULATOR_HOST="localhost:8080"
+Or via `.env` file (see `backend/.env`):
+```env
+GCP_PROJECT_ID="aegis-verify-2026"
+GCP_REGION="us-central1"
+CORS_ORIGINS='["http://localhost:3000"]'
 ```
 
-4. Run the API server (development):
-
-```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Frontend (Next.js)
-
-1. Install dependencies and start dev server:
+### Frontend (Next.js)
 
 ```bash
 cd frontend
 npm install
 npm run dev
+# Open http://localhost:3000
 ```
 
-2. Open the app in your browser: `http://localhost:3000`
+> **Note:** The frontend hardcodes `http://localhost:8000/api/v1/scan` for local development. Update this to the Cloud Run URL for production.
+
+### One-Command Deploy
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+# Select [3] SYNC for simultaneous Vercel + Cloud Run deployment
+```
 
 ---
 
-## API: Evidence Upload & Autopsy
+## API Reference
 
-Endpoint (example)
+### `POST /api/v1/scan`
 
-- `POST /api/v1/scan` — multipart form with `file` and `user_prompt`
+Accepts multipart form data. Runs the full LangGraph autopsy pipeline.
 
-Curl example:
-
+**Request:**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/scan" \
-  -F "file=@/path/to/evidence.jpg" \
-  -F "user_prompt=Please analyze for red flags and missing metadata"
+  -F "file=@/path/to/evidence.pdf" \
+  -F "user_prompt=Audit this medical report for authenticity and missing patient data"
 ```
 
-Successful response (JSON) contains the LangGraph `AutopsyState` findings and flow state. Important fields used by the frontend:
-
+**Response:**
 ```json
 {
-  "findings": {
-    "critical_red_flags": ["..."],
-    "missing_metadata": ["..."],
-    "contextual_verdict": "..."
-  },
+  "status": "success",
+  "message": "Scan request completed",
+  "filename": "evidence.pdf",
   "autopsy_report_ready": true,
-  "active_sieves": [ /* dynamic sieve definitions */ ]
+  "active_sieves": [
+    {
+      "sieve_name": "DocumentMetadataVerification",
+      "objective": "Extract and analyze metadata from the medical report to identify inconsistencies in creation date, author, or modification history that might suggest inauthenticity.",
+      "required_tool": "metadata"
+    }
+  ],
+  "findings": {
+    "cache_hit": true,
+    "cache_distance": 0.007283135771109839,
+    "critical_red_flags": ["The document is missing all patient-identifying information..."],
+    "missing_metadata": ["Patient Name", "Age/Gender", "MaxID/Lab ID"],
+    "contextual_verdict": "I have reviewed the medical report...",
+    "executor_status": "completed"
+  }
 }
 ```
 
-The frontend expects these fields to populate the PDF report. No mock data is used — the pipeline calls Vertex AI and Firestore.
+**Key findings fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `cache_hit` | bool | Whether sieves were retrieved from Firestore (vs. freshly forged) |
+| `cache_distance` | float | Cosine distance from nearest cached embedding (lower = closer match) |
+| `critical_red_flags` | `string[]` | Forensic anomalies detected by the active sieves |
+| `missing_metadata` | `string[]` | Required fields absent from the document |
+| `contextual_verdict` | string | Gemini 2.5 Pro narrative verdict addressing the user's prompt |
+| `executor_status` | string | `"completed"` or `"failed"` |
 
 ---
 
-## Generating the Forensic PDF (UI)
+## Technology Stack
 
-1. Use the Next.js UI to upload evidence and trigger the scan.
-2. When analysis completes, click the **Download Forensic Autopsy** button to generate the PDF via `@react-pdf/renderer`.
+### Frontend — CISO Cockpit
 
-The UI uses `PDFDownloadLink` which shows a loading state while the PDF is prepared.
+| Technology | Version | Role |
+|---|---|---|
+| Next.js | 16.2.4 | App Router, SSR, routing |
+| React | 19.2.4 | UI framework |
+| TypeScript | 5.x | Type safety |
+| Tailwind CSS | 4.x | Utility-first styling |
+| `@react-pdf/renderer` | 4.5.1 | On-demand Forensic Autopsy PDF generation |
+| `react-dropzone` | 15.x | Drag-and-drop evidence intake |
+| WebCrypto API | native | SHA-256 client-side hashing |
+
+### Backend — Intelligence Engine
+
+| Technology | Version | Role |
+|---|---|---|
+| Python | 3.11+ | Runtime |
+| FastAPI | 0.115.0 | REST API, CORS middleware |
+| LangGraph | 1.0.10 | StateGraph orchestration |
+| Pydantic | 2.12.5 | Settings, validation |
+| uvicorn | 0.30.6 | ASGI server |
+| Docker | python:3.11 | Containerization for Cloud Run |
+
+### AI & Memory — Google-Native
+
+| Service | Model / Version | Role |
+|---|---|---|
+| Vertex AI | Gemini 2.5 Pro | Multimodal forensic executor (`execute_forensic_sieves`) |
+| Vertex AI | Gemini 2.5 Flash | Ephemeral sieve forging (`sieve_forge_node`) |
+| Vertex AI | `text-embedding-004` | Prompt vectorization for cache lookup |
+| Vertex AI | Google Search Grounding | Live OSINT retrieval (prepared, SDK-guarded) |
+| Firestore | Native Vector Search | Recursive Sieve Vault — `ephemeral_sieves` collection |
+
+### Infrastructure
+
+| Service | Role |
+|---|---|
+| Vercel | Frontend hosting (Next.js production build) |
+| Google Cloud Run | Backend hosting (auto-scales 0→N, 1Gi memory) |
+| Google Artifact Registry | Docker image storage (via `gcloud run deploy --source`) |
 
 ---
 
-## Architecture Summary
+## Project Structure
 
-- Adaptive Sieve Architecture: dynamic `sieves` are forged or reused (via Firestore vector memory) per evidence and prompt.
-- `VertexLLMService`: grounded Gemini model (gemini-1.5-pro) with Google Search retrieval to provide legally-relevant context.
-- LangGraph orchestrates the AutopsyState state machine and routes work between memory lookup, sieve forging, and executor nodes.
-- Frontend renders the `Forensic Autopsy` using `@react-pdf/renderer` with a strict contract (`critical_red_flags`, `missing_metadata`, `contextual_verdict`).
+```
+aegis-verify/
+│
+├── frontend/                          # Next.js CISO Cockpit
+│   ├── app/
+│   │   ├── layout.tsx                 # Root layout (Geist fonts)
+│   │   ├── page.tsx                   # CISO Dashboard (drag-drop, trust score, findings)
+│   │   └── globals.css                # Tailwind CSS v4 + CSS variables
+│   ├── components/
+│   │   └── AutopsyReport.tsx          # PDF generation (@react-pdf/renderer)
+│   └── package.json                   # next 16, react 19, @react-pdf/renderer 4.5.1
+│
+├── backend/                           # FastAPI + LangGraph
+│   ├── main.py                        # POST /api/v1/scan endpoint + CORS
+│   ├── core/
+│   │   ├── config.py                  # Pydantic BaseSettings (fail-fast)
+│   │   └── graph.py                   # LangGraph StateGraph (3 nodes)
+│   ├── services/
+│   │   ├── vertex_llm.py              # VertexLLMService (Gemini 2.5 Pro/Flash)
+│   │   └── firestore_db.py            # FirestoreSieveStore (vector search + save)
+│   ├── Dockerfile                     # python:3.11, PORT 8080
+│   └── requirements.txt               # fastapi, langgraph, google-cloud-*
+│
+├── docs/                              # Architecture diagrams & screenshots
+│   ├── system_architecture.png
+│   ├── forensic_pipeline.png
+│   └── langgraph_state_machine.png
+│
+├── deploy.sh                          # Deployment Commander v2.0 (Vercel + Cloud Run)
+├── README.md                          # This file
+├── architecture.md                    # Tech stack & state machine reference
+├── context.md                         # Mission context & constraints
+├── current_code.md                    # Full code snapshot (gitignored)
+└── logs.md                            # Development work log (gitignored)
+```
 
 ---
 
 ## Environment & Secrets
 
-Minimum environment variables used by the backend (example names):
+```bash
+# backend/.env (not tracked by git)
+GCP_PROJECT_ID="aegis-verify-2026"
+GCP_REGION="us-central1"
+CORS_ORIGINS='["http://localhost:3000"]'
+```
 
-- `GOOGLE_APPLICATION_CREDENTIALS` — path to GCP service account JSON
-- `GCP_PROJECT_ID` — GCP project used for Vertex & Firestore
-- `FIRESTORE_EMULATOR_HOST` — optional for local Firestore emulation
+- `GOOGLE_APPLICATION_CREDENTIALS` — path to GCP service account JSON (for local dev)
+- `GCP_PROJECT_ID` — GCP project for Vertex AI + Firestore
+- `GCP_REGION` — defaults to `us-central1`
+- `CORS_ORIGINS` — comma-separated list of allowed origins
 
-Keep these secrets out of source control (they're loaded from the environment by the backend config).
+For Cloud Run, env vars are injected via `--set-env-vars` in `deploy.sh`.
 
 ---
 
-## Developer Tips & Troubleshooting
+## Use Cases
 
-- If Vertex calls fail, confirm `GOOGLE_APPLICATION_CREDENTIALS` and `GCP_PROJECT_ID` are set and the service account has Vertex AI + Firestore permissions.
-- If Firestore cache lookups misbehave, try running with the emulator or inspect stored vectors in your Firestore console.
-- Use `uvicorn --reload` for live backend reload while developing.
+### Insurance Fraud Detection
+Upload a crash photo with prompt *"Verify this insurance claim for location inconsistency"*. The system generates Geolocation and EXIF Camera Metadata sieves, extracts hidden GPS coordinates, and proves the photo location is inconsistent with the claimed accident site.
 
-Regenerating the project snapshot (advanced): `scripts/generate_snapshot.sh` (if present) or run a manual `find`/`wc -l` to inspect files.
+### Corporate Document Fraud
+Upload a vendor invoice with prompt *"Verify vendor legitimacy"*. System constructs OSINT sieves, uses Vertex Grounding to check domain registration and corporate records, and flags shell companies or recently-registered domains.
+
+### Medical Report Verification
+Upload a medical PDF with prompt *"Check this report for authenticity"*. The DocumentMetadataVerification sieve extracts metadata, flags missing patient-identifying fields, and delivers a 40% Trust Score — **CAUTION**.
+
+---
+
+## Developer Tips
+
+- **Vertex call failures:** Confirm `GOOGLE_APPLICATION_CREDENTIALS` and `GCP_PROJECT_ID` are set; verify service account has `Vertex AI User` + `Firestore User` roles.
+- **Firestore cache issues:** Check `ephemeral_sieves` collection in Firestore console; the cosine distance threshold is `0.15` — lower = stricter cache matching.
+- **Google Search Grounding:** Currently SDK-guarded behind `hasattr(Tool, "from_google_search")` for Gemini 2.5+ compatibility. Tools commented out in `execute_forensic_sieves()` pending SDK version alignment.
+- **PDF not rendering:** Ensure `autopsy_report_ready = true` and all three fields (`critical_red_flags`, `missing_metadata`, `contextual_verdict`) are non-null strings/arrays in `findings`.
+- **Local reload:** Use `uvicorn main:app --reload` for live backend changes.
 
 ---
 
 ## Contributing
-
-1. Fork the repo, create a feature branch, and open a PR.
-2. Keep changes focused and include tests where applicable.
-
-Suggested workflow:
 
 ```bash
 git checkout -b feat/your-change
@@ -155,161 +418,8 @@ git push origin feat/your-change
 
 ## License
 
-This project currently has no license file. Add a `LICENSE` at the repo root if you plan to publish.
+No license file is currently present. Add a `LICENSE` at the repo root before public release.
 
 ---
 
-If you want, I can also:
-
-- add badges, CI workflow examples, and a `make` or `justfile` to simplify the commands above
-- create a minimal `README` section in `frontend/README.md` with developer run scripts
-- open a draft PR with these changes
-
-Tell me which optional items you'd like next.
-
----
-
-## Problem Statement — The Visibility Gap & Alert Fatigue
-
-The proliferation of Generative AI has eroded digital trust. Enterprises, media organizations, and legal institutions face an unprecedented volume of sophisticated digital manipulation (deepfakes, forged contracts, synthetic media). Current detection approaches suffer from three fatal flaws:
-
-- **Probabilistic "Black Boxes":** Generic likelihood scores without explainable proof are inadequate for legal or high-stakes audit contexts.
-- **Alert Fatigue:** Uncontextualized anomaly flags overwhelm security teams, increasing the chance true threats are ignored.
-- **Static Rigidity:** Rule-based detectors lack domain awareness and cannot dynamically adapt to novel document types or domains.
-
-There is a critical visibility gap: organizations need a deterministic, context-aware, and explainable system that can authenticate digital assets and provide provable evidence of unauthorized manipulation in near real-time.
-
-## Our Solution — Aegis-Verify
-
-Aegis-Verify is a Domain-Aware, Autonomous Digital Asset Forensics Engine. Instead of a single "trust score" we produce a Cryptographic Forensic Autopsy Report: a human- and legally-readable artifact that records the tests performed, the deterministic proofs (e.g., hashes, metadata), and the LLM-guided findings.
-
-Key attributes:
-
-- **Context-Driven:** User supplies a contextual prompt (e.g., "Audit this insurance car damage claim") which guides the investigation.
-- **Ephemeral Sieve Forge:** The system dynamically invents and deploys custom forensic tests (Sieves) tailored to the specific asset and prompt.
-- **Neuro-Symbolic Verification:** Combines probabilistic LLM analysis (Gemini 1.5 Pro) with deterministic math (EXIF, cryptographic hashing, metadata extraction) for both semantic insight and absolute proof.
-- **Grounded OSINT:** Uses Vertex AI Grounding (Google Search) to cross-check claims against live web evidence.
-
-## Opportunities & Unique Selling Proposition (USP)
-
-How we differ from existing approaches:
-
-- **Dynamic vs. Static:** A cognitive router that forges only the sieves needed per asset, reducing compute and increasing relevance.
-- **Explainability over Scores:** Instead of opaque percentages, we provide autopsy-style findings that explain *why* something is suspicious and how that conclusion was reached.
-- **Recursive Sieve Vault:** When a novel sieve is created and validated, the logic is vectorized and cached in Firestore. Future similar cases retrieve the verified sieve from memory (sub-second), bypassing the LLM and reducing cost while improving accuracy.
-
-This design turns the system into an autonomous, self-evolving immune system for enterprise digital trust.
-
-## Features
-
-- Context-Aware Ingestion (multi-modal: images, PDFs, associated natural-language directives)
-- Zero-Shot Ephemeral Sieve Forge (real-time, bespoke forensic logic)
-- Recursive Sieve Vault (Firestore Native Vector Search cache for verified sieves)
-- Vertex AI Grounding (live OSINT checks via Google Search retrieval)
-- Cryptographic Chain of Custody (SHA-256 hashes for immutability)
-- Downloadable Forensic Autopsy PDF (Red Flags, Missing Metadata, Sieve Breakdown, Contextual Verdict)
-
-## Process Flow (System Architecture)
-
-High-level steps:
-
-1. Ingest: User uploads asset and provides a context string.
-2. Immutable Base: System computes SHA-256 hash and extracts metadata (EXIF/PDF fields).
-3. Vector Lookup: Embed the context via Vertex AI embeddings and query Firestore Vector DB.
-4. Decision Branch:
-  - Cache Hit (similarity above 85%): retrieve pre-existing sieves from Firestore.
-  - Cache Miss (similarity at or below 85%): trigger Gemini 1.5 Pro to forge new Ephemeral Sieves and persist them to Firestore.
-5. Parallel Execution: LangGraph routes the asset through active sieves concurrently (Visual, Semantic, OSINT grounding sieves).
-6. Governor: LangGraph compiles sieve results into a unified JSON findings structure.
-7. Export: Frontend renders dashboard and generates the downloadable Forensic Autopsy PDF.
-
-Mermaid diagram (process flow):
-
-```mermaid
-flowchart TD
-  A[Ingest Asset + Context] --> B[Compute SHA-256 & Extract Metadata]
-  B --> C[Embed Context & Query Firestore]
-  C -->|Similarity above 0.85| D[Cache Hit: Retrieve Sieves]
-  C -->|Similarity at or below 0.85| E[Cache Miss: Forge Sieves (Gemini)]
-  D --> F[LangGraph: Execute Sieves in Parallel]
-  E --> F
-  F --> G[Compile Findings (Governor)]
-  G --> H[Dashboard + PDF Forensic Autopsy]
-```
-
-### System Architecture (Component Diagram)
-
-This diagram shows the main runtime components and their interactions during a scan request.
-
-```mermaid
-flowchart LR
-  subgraph Browser
-    UIC[Next.js CISO Cockpit]
-  end
-
-  subgraph Frontend
-    UIC -->|POST /api/v1/scan| API[FastAPI (Cloud Run / Local)]
-  end
-
-  subgraph Backend
-    API -->|enqueue/ainvoke| SG[LangGraph StateGraph]
-    SG -->|calls| FS[Firestore (Recursive Sieve Vault)]
-    SG -->|forge| VTX[Vertex AI Gemini 1.5 Pro]
-    SG -->|grounding| VG[Vertex Grounding (Google Search)]
-    SG -->|visual| VISION[Cloud Vision API]
-    SG -->|persist| FS
-    API -->|serve| UIResult[Scan Results / Findings JSON]
-  end
-
-  subgraph AI_Stack
-    VTX[Vertex AI Gemini 1.5 Pro]
-    VG[Vertex Grounding (Google Search)]
-    VISION[Cloud Vision API]
-  end
-
-  FS -.->|vector retrieval| SG
-  VTX -->|sieve logic| SG
-  VG -->|search evidence| SG
-  VISION -->|ocr/bbox| SG
-
-  UIResult -->|render| UIC
-```
-
-The diagram illustrates the request path from the browser, through the API, into the LangGraph orchestrator which interacts with Vertex AI, Vertex Grounding, Cloud Vision, and Firestore. Results are compiled and returned to the frontend for rendering and PDF export.
-
-## Use Cases
-
-- **Insurance Fraud:** Upload a crash photo with "Verify claim". System generates Geolocation and Camera Metadata sieves, extracts hidden EXIF GPS, and proves the photo location is inconsistent with the claimed accident site.
-- **Corporate Fraud / Espionage:** Upload a vendor invoice and prompt "Verify vendor legitimacy". System constructs OSINT sieves, uses Vertex Grounding to check domain registration and corporate records, and flags shell companies or recently-registered domains.
-
-## Technology Stack — Google-Native
-
-Frontend (CISO Cockpit)
-
-- Next.js (App Router) + React 18
-- Tailwind CSS, shadcn/ui, Framer Motion for Sieve pulse animations
-- `@react-pdf/renderer` for on-demand Forensic Autopsy PDF generation
-
-Backend (Intelligence Engine)
-
-- Python 3.11+, FastAPI, Pydantic
-- LangGraph for orchestrating the state machine and parallel sieve execution
-- Deploy on Google Cloud Run (scales 0→N)
-
-AI & Memory
-
-- Vertex AI Gemini 1.5 Pro (multimodal model) for forging sieves and semantic/visual analysis
-- Vertex AI Grounding (Google Search retrieval) for live OSINT
-- Vertex AI Embeddings (`textembedding-gecko`) for vectorizing prompts
-- Google Cloud Firestore with Native Vector Search as the Recursive Sieve Vault
-- Google Cloud Vision API for bounding box OCR/visual forensics
-
----
-
-If you'd like, I can now:
-
-- generate SVG/PNG diagrams from the mermaid flow and add them to `/docs`;
-- add an architecture image layout to `architecture.md` and link it here;
-- create `frontend/README.md` with quick dev scripts and `backend/requirements.txt` if missing.
-
-Tell me which of these you'd like next.
+*Aegis-Verify — Autonomous Digital Asset Forensics · Google Solution Challenge 2026*

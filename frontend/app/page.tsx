@@ -23,6 +23,7 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [userPrompt, setUserPrompt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerdictOpen, setIsVerdictOpen] = useState(false);
   const [result, setResult] = useState<AutopsyApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileSha256, setFileSha256] = useState<string>("");
@@ -109,7 +110,6 @@ export default function Home() {
     }
 
     const criticalRedFlags = result.findings.critical_red_flags;
-    const numSieves = result.active_sieves.length || 1;
 
     if (!Array.isArray(criticalRedFlags)) {
       return null;
@@ -117,26 +117,15 @@ export default function Home() {
 
     const numFlags = criticalRedFlags.length;
 
-    // If no flags, perfect trust
     if (numFlags === 0) {
-      return { score: 100, level: "high", label: "Clean" };
+      return { score: 100, level: "high", label: "Authentic" };
     }
 
-    // Calculate ratio: flags per sieve
-    const flagsPerSieve = numFlags / numSieves;
-
-    // High risk: more than 2 flags per sieve on average
-    if (flagsPerSieve > 2) {
-      return { score: 25, level: "low", label: "Suspicious" };
+    if (numFlags === 1) {
+      return { score: 40, level: "mid", label: "Caution" };
     }
 
-    // Mid risk: 1-2 flags per sieve
-    if (flagsPerSieve > 1) {
-      return { score: 55, level: "mid", label: "Caution" };
-    }
-
-    // Low risk: less than 1 flag per sieve
-    return { score: 75, level: "high", label: "Mostly Safe" };
+    return { score: 12, level: "low", label: "Forged" };
   }, [result?.findings, result?.active_sieves]);
 
   const handleRunAutopsy = async () => {
@@ -351,18 +340,23 @@ export default function Home() {
                           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                             Contextual Verdict
                           </p>
-                          <p
-                            className={`mt-3 text-sm leading-6 ${
-                              isVerdictThreat ? "text-rose-900" : "text-emerald-900"
+                          <button
+                            type="button"
+                            onClick={() => setIsVerdictOpen(true)}
+                            className={`mt-3 inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${
+                              isVerdictThreat
+                                ? "bg-rose-600 text-white hover:bg-rose-700"
+                                : "bg-emerald-600 text-white hover:bg-emerald-700"
                             }`}
                           >
-                            {contextualVerdict}
-                          </p>
+                            View Contextual Verdict
+                          </button>
                         </div>
                         {trustScore && (
                           <div className="flex flex-col items-center gap-2 pt-1">
                             <div
                               className={`relative flex h-16 w-16 items-center justify-center rounded-full border-4 text-center ${
+
                                 trustScore.level === "low"
                                   ? "border-rose-300 bg-rose-100"
                                   : trustScore.level === "mid"
@@ -396,10 +390,11 @@ export default function Home() {
                     </article>
                   </div>
 
-                  <article className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                      Active Sieves
-                    </p>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <article className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                        Active Sieves
+                      </p>
                     <div className="mt-3 grid gap-3">
                       {(result.active_sieves ?? []).length > 0 ? (
                         result.active_sieves?.map((sieve) => (
@@ -424,18 +419,19 @@ export default function Home() {
                         <p className="text-sm text-slate-500">No active sieves returned.</p>
                       )}
                     </div>
-                  </article>
+                    </article>
 
-                  <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                       Findings
                     </p>
                     <div className="mt-3 overflow-x-auto max-w-full">
-                      <pre className="rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100 whitespace-pre-wrap break-words">
+                      <pre className="rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100 whitespace-pre-wrap break-words max-h-[300px] overflow-y-auto">
                         {JSON.stringify(result.findings ?? {}, null, 2)}
                       </pre>
                     </div>
                   </article>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
@@ -499,6 +495,89 @@ export default function Home() {
             </div>
           </aside>
         </section>
+
+        {isVerdictOpen && result ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl shadow-slate-950/30 ring-1 ring-slate-200">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
+                    Contextual Verdict
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                    Full Analysis
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsVerdictOpen(false)}
+                  aria-label="Close contextual verdict"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+                >
+                  X
+                </button>
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Verdict Text
+                </p>
+                <p className="mt-3 text-sm leading-7 text-slate-800">
+                  {contextualVerdict}
+                </p>
+              </div>
+
+              {trustScore ? (
+                <div className="mt-4 flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div
+                    className={`relative flex h-16 w-16 items-center justify-center rounded-full border-4 text-center ${
+                      trustScore.level === "low"
+                        ? "border-rose-300 bg-rose-100"
+                        : trustScore.level === "mid"
+                          ? "border-amber-300 bg-amber-100"
+                          : "border-emerald-300 bg-emerald-100"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-slate-950">
+                        {trustScore.score}%
+                      </p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        Trust
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      Trust Score
+                    </p>
+                    <p
+                      className={`mt-1 text-base font-semibold ${
+                        trustScore.level === "low"
+                          ? "text-rose-700"
+                          : trustScore.level === "mid"
+                            ? "text-amber-700"
+                            : "text-emerald-700"
+                      }`}
+                    >
+                      {trustScore.label}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsVerdictOpen(false)}
+                  className="inline-flex h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </main>
     </div>
   );
